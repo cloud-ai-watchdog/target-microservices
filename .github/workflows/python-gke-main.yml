@@ -7,10 +7,10 @@ on:
       GCP_PROJECT_ID:
         type: string
         required: false
-      GKE_CLUSTER:
+      GKE_CLUSTER_NAME:
         type: string
         required: false
-      GKE_LOCATION:
+      GKE_CLUSTER_ZONE:
         type: string
         required: false
       GAR_LOCATION:
@@ -30,7 +30,8 @@ jobs:
       image_matrix: ${{ steps.set-matrix.outputs.image_matrix }}
       helm_matrix: ${{ steps.set-matrix.outputs.helm_matrix }}
       gcp_project_id: ${{ steps.set-vars.outputs.gcp_project_id }}
-      gke_cluster: ${{ steps.set-vars.outputs.gke_cluster }}
+      gke_cluster_name: ${{ steps.set-vars.outputs.gke_cluster_name }}
+      gke_cluster_zone: ${{ steps.set-vars.outputs.gke_cluster_zone }}
       gke_location: ${{ steps.set-vars.outputs.gke_location }}
       gar_location: ${{ steps.set-vars.outputs.gar_location }}
       gar_location_prefix: ${{ steps.set-vars.outputs.gar_location_prefix }}
@@ -55,29 +56,29 @@ jobs:
           set -e
           echo "📝 Setting common variables..."
           GCP_PROJECT_ID_DEFAULT=$(yq e '.GCP_PROJECT_ID' .github/utils-cicd/default-common-configs.yaml)
-          GKE_CLUSTER_DEFAULT=$(yq e '.GKE_CLUSTER' .github/utils-cicd/default-common-configs.yaml)
-          GKE_LOCATION_DEFAULT=$(yq e '.GKE_LOCATION' .github/utils-cicd/default-common-configs.yaml)
+          GKE_CLUSTER_NAME_DEFAULT=$(yq e '.GKE_CLUSTER_NAME' .github/utils-cicd/default-common-configs.yaml)
+          GKE_CLUSTER_ZONE_DEFAULT=$(yq e '.GKE_CLUSTER_ZONE' .github/utils-cicd/default-common-configs.yaml)
           GAR_LOCATION_DEFAULT=$(yq e '.GAR_LOCATION' .github/utils-cicd/default-common-configs.yaml)
           GAR_LOCATION_PREFIX_DEFAULT=$(yq e '.GAR_LOCATION_PREFIX' .github/utils-cicd/default-common-configs.yaml)
           SERVICE_ACCOUNT_DEFAULT=$(yq e '.SERVICE_ACCOUNT' .github/utils-cicd/default-common-configs.yaml)
 
           if [ -z "${{ inputs.GCP_PROJECT_ID }}" ]; then GCP_PROJECT_ID="$GCP_PROJECT_ID_DEFAULT"; else GCP_PROJECT_ID="${{ inputs.GCP_PROJECT_ID }}"; fi
-          if [ -z "${{ inputs.GKE_CLUSTER }}" ]; then GKE_CLUSTER="$GKE_CLUSTER_DEFAULT"; else GKE_CLUSTER="${{ inputs.GKE_CLUSTER }}"; fi
-          if [ -z "${{ inputs.GKE_LOCATION }}" ]; then GKE_LOCATION="$GKE_LOCATION_DEFAULT"; else GKE_LOCATION="${{ inputs.GKE_LOCATION }}"; fi
+          if [ -z "${{ inputs.GKE_CLUSTER_NAME }}" ]; then GKE_CLUSTER_NAME="$GKE_CLUSTER_DEFAULT"; else GKE_CLUSTER_NAME="${{ inputs.GKE_CLUSTER_NAME }}"; fi
+          if [ -z "${{ inputs.GKE_CLUSTER_ZONE }}" ]; then GKE_CLUSTER_ZONE="$GKE_CLUSTER_ZONE_DEFAULT"; else GKE_CLUSTER_ZONE="${{ inputs.GKE_CLUSTER_ZONE }}"; fi
           if [ -z "${{ inputs.GAR_LOCATION }}" ]; then GAR_LOCATION="$GAR_LOCATION_DEFAULT"; else GAR_LOCATION="${{ inputs.GAR_LOCATION }}"; fi
           if [ -z "${{ inputs.GAR_LOCATION_PREFIX }}" ]; then GAR_LOCATION_PREFIX="$GAR_LOCATION_PREFIX_DEFAULT"; else GAR_LOCATION_PREFIX="${{ inputs.GAR_LOCATION_PREFIX }}"; fi
           if [ -z "${{ inputs.SERVICE_ACCOUNT }}" ]; then SERVICE_ACCOUNT="$SERVICE_ACCOUNT_DEFAULT"; else SERVICE_ACCOUNT="${{ inputs.SERVICE_ACCOUNT }}"; fi
           
           echo "Final GCP_PROJECT_ID: $GCP_PROJECT_ID"
-          echo "Final GKE_CLUSTER: $GKE_CLUSTER"
-          echo "Final GKE_LOCATION: $GKE_LOCATION"
+          echo "Final GKE_CLUSTER_NAME: $GKE_CLUSTER_NAME"
+          echo "Final GKE_CLUSTER_ZONE: $GKE_CLUSTER_ZONE"
           echo "Final GAR_LOCATION: $GAR_LOCATION"
           echo "Final GAR_LOCATION_PREFIX: $GAR_LOCATION_PREFIX"
           echo "Final SERVICE_ACCOUNT: $SERVICE_ACCOUNT"
 
           echo "::set-output name=gcp_project_id::$GCP_PROJECT_ID"
-          echo "::set-output name=gke_cluster::$GKE_CLUSTER"
-          echo "::set-output name=gke_location::$GKE_LOCATION"
+          echo "::set-output name=gke_cluster_name::$GKE_CLUSTER_NAME"
+          echo "::set-output name=gke_cluster_zone::$GKE_CLUSTER_ZONE"
           echo "::set-output name=gar_location::$GAR_LOCATION"
           echo "::set-output name=gar_location_prefix::$GAR_LOCATION_PREFIX"
           echo "::set-output name=service_account::$SERVICE_ACCOUNT"
@@ -160,8 +161,8 @@ jobs:
       - name: Get GKE Credentials
         run: |
           set -ex
-          echo "🔐 Getting GKE credentials for cluster ${{ needs.read-config.outputs.gke_cluster }}..."
-          gcloud container clusters get-credentials ${{ needs.read-config.outputs.gke_cluster }} --region ${{ needs.read-config.outputs.gke_location }}
+          echo "🔐 Getting GKE credentials for cluster ${{ needs.read-config.outputs.gke_cluster_name }}..."
+          gcloud container clusters get-credentials ${{ needs.read-config.outputs.gke_cluster_name }} --region ${{ needs.read-config.outputs.gke_cluster_zone }}
           echo "✅ GKE credentials obtained."
 
       - name: Helm Dry Run

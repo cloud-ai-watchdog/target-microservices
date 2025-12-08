@@ -21,7 +21,7 @@ jobs:
     #         CLOUD_RUN_RAM: 512Mi
 
     main:
-        uses: cloud-ai-watchdog/sample-python-wsgi-prod-app/.github/workflows/python-gke-main.yml@main
+        uses: cloud-ai-watchdog/target-microservices/.github/workflows/python-gke-main.yml@main
         secrets: inherit
         with:
             GCP_PROJECT_ID: cloud-ai-police
