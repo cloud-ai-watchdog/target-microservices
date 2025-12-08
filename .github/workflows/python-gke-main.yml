@@ -179,6 +179,13 @@ jobs:
             --dry-run
           echo "✅ Helm dry run completed."
 
+      - name: Uninstall any previous release
+        run: |
+          set -ex
+          echo "🧹 Uninstalling any previous Helm release: ${{ matrix.HELM_RELEASE_NAME }}..."
+          helm uninstall ${{ matrix.HELM_RELEASE_NAME }} --namespace ${{ matrix.HELM_NAMESPACE }} || echo "No previous release found."
+          echo "✅ Previous release uninstalled."
+
       - name: Deploy with Helm
         run: |
           set -ex
