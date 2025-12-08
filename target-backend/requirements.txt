@@ -1,8 +1,6 @@
-fastapi[all]
-sqlalchemy
+Flask
+SQLAlchemy
 psycopg2-binary
 requests
 beautifulsoup4
 Pillow
-uvicorn
-python-multipart
