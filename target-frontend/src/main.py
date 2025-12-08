@@ -1,18 +1,28 @@
-import streamlit as st
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 import requests
 
-st.title("Microservices Interaction")
+app = FastAPI()
+templates = Jinja2Templates(directory="src/templates")
 
-backend_url = "http://target-backend-service:80"
+backend_url = "http://target-backend-release-target-backend-service"
 
-if st.button("Checksum News"):
+@app.get("/", response_class=HTMLResponse)
+async def read_root(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
+
+@app.post("/checksum-news")
+async def checksum_news():
     response = requests.post(f"{backend_url}/checksum-news/", json=["ai", "machine learning"])
-    st.write(response.json())
+    return response.json()
 
-if st.button("Checksum Images"):
+@app.post("/checksum-images")
+async def checksum_images():
     response = requests.post(f"{backend_url}/checksum-images-news/", json=["cat", "dog"])
-    st.write(response.json())
+    return response.json()
 
-if st.button("Checksum Files"):
+@app.post("/checksum-files")
+async def checksum_files():
     response = requests.post(f"{backend_url}/checksum-files/?depth=2")
-    st.write(response.json())
+    return response.json()

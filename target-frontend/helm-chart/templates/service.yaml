@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Release.Name }}-target-frontend-service
+  name: {{ .Release.Name }}-service
 spec:
   type: {{ .Values.service.type }}
   ports:
@@ -9,5 +9,5 @@ spec:
       targetPort: {{ .Values.service.targetPort }}
       protocol: {{ .Values.service.protocol }}
   selector:
-    app: target-frontend
+    app: {{ .Values.appName }}
 

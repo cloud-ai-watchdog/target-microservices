@@ -3,7 +3,7 @@ replicaCount: 1
 
 
 image:
-  repository: your-repo/target-frontend
+  repository: us-central1-docker.pkg.dev/cloud-ai-police/cloud-ai-police-gar/target-frontend
   tag: latest
   pullPolicy: IfNotPresent
 
