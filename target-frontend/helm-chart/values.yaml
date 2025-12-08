@@ -1,0 +1,10 @@
+replicaCount: 1
+
+image:
+  repository: your-repo/target-frontend
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: LoadBalancer
+  port: 8501

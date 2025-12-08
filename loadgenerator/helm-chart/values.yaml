@@ -1,0 +1,6 @@
+schedule: "*/1 * * * *"
+
+image:
+  repository: us-central1-docker.pkg.dev/cloud-ai-police/cloud-ai-police-gar
+  tag: latest
+  pullPolicy: IfNotPresent

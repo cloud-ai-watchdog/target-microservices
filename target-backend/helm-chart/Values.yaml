@@ -1,0 +1,20 @@
+replicaCount: 1
+
+image:
+  backend:
+    repository: us-central1-docker.pkg.dev/cloud-ai-police/cloud-ai-police-gar/target-backend
+    tag: latest
+    pullPolicy: IfNotPresent
+  postgres:
+    repository: postgres
+    tag: 13
+    pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+
+postgres:
+  user: user
+  password: password
+  db: mydatabase
