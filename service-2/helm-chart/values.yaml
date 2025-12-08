@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:
-  repository: "us-central1-docker.pkg.dev/cloud-ai-police/python-gke-server/image-name-2"
+  repository: "us-central1-docker.pkg.dev/cloud-ai-police/cloud-ai-police-gar/image-name-2"
   pullPolicy: IfNotPresent
   tag: "tag-2"
 
