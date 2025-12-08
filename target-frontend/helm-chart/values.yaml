@@ -1,4 +1,6 @@
+appName: target-frontend
 replicaCount: 1
+
 
 image:
   repository: your-repo/target-frontend
@@ -8,3 +10,6 @@ image:
 service:
   type: LoadBalancer
   port: 8501
+  targetPort: 80
+  protocol: TCP
+  name: http
