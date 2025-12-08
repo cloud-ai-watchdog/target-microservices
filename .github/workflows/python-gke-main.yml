@@ -163,8 +163,10 @@ jobs:
           set -ex
           echo "🔐 Getting GKE credentials for cluster ${{ needs.read-config.outputs.gke_cluster_name }}..."
           gcloud components install kubectl --quiet
-          gcloud components install helm --quiet
           gcloud components install gke-gcloud-auth-plugin --quiet
+          # Install helm
+          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+          helm version
           gcloud container clusters get-credentials ${{ needs.read-config.outputs.gke_cluster_name }} --region ${{ needs.read-config.outputs.gke_cluster_zone }}
           echo "✅ GKE credentials obtained."
 
