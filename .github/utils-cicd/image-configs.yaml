@@ -1,0 +1,9 @@
+images:
+  - DOCKER_FILE: "service-1/Dockerfile"
+    DOCKER_CONTEXT_DIR: "service-1"
+    IMAGE_NAME: "image-name-1"
+    IMAGE_TAG: "tag-1"
+  - DOCKER_FILE: "service-2/Dockerfile"
+    DOCKER_CONTEXT_DIR: "service-2"
+    IMAGE_NAME: "image-name-2"
+    IMAGE_TAG: "tag-2"

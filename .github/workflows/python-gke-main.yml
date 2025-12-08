@@ -1,0 +1,182 @@
+name: Deploy Python App to GKE with Helm
+
+on:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      GCP_PROJECT_ID:
+        type: string
+        required: false
+      GKE_CLUSTER:
+        type: string
+        required: false
+      GKE_LOCATION:
+        type: string
+        required: false
+      GAR_LOCATION:
+        type: string
+        required: false
+      GAR_LOCATION_PREFIX:
+        type: string
+        required: false
+      SERVICE_ACCOUNT:
+        type: string
+        required: false
+
+jobs:
+  read-config:
+    runs-on: ubuntu-latest
+    outputs:
+      image_matrix: ${{ steps.set-matrix.outputs.image_matrix }}
+      helm_matrix: ${{ steps.set-matrix.outputs.helm_matrix }}
+      gcp_project_id: ${{ steps.set-vars.outputs.gcp_project_id }}
+      gke_cluster: ${{ steps.set-vars.outputs.gke_cluster }}
+      gke_location: ${{ steps.set-vars.outputs.gke_location }}
+      gar_location: ${{ steps.set-vars.outputs.gar_location }}
+      gar_location_prefix: ${{ steps.set-vars.outputs.gar_location_prefix }}
+      service_account: ${{ steps.set-vars.outputs.service_account }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Read image and helm configurations
+        id: set-matrix
+        run: |
+          set -e
+          echo "📝 Reading configurations..."
+          IMAGES_JSON=$(yq e -o=json '.images' .github/utils-cicd/image-configs.yaml | jq -c .)
+          HELM_JSON=$(yq e -o=json '.releases' .github/utils-cicd/helm-configs.yaml | jq -c .)
+          echo "Image Matrix JSON: $IMAGES_JSON"
+          echo "Helm Matrix JSON: $HELM_JSON"
+          echo "::set-output name=image_matrix::$IMAGES_JSON"
+          echo "::set-output name=helm_matrix::$HELM_JSON"
+          echo "✅ Configurations read successfully."
+      - name: Set common variables
+        id: set-vars
+        run: |
+          set -e
+          echo "📝 Setting common variables..."
+          GCP_PROJECT_ID_DEFAULT=$(yq e '.GCP_PROJECT_ID' .github/utils-cicd/default-common-configs.yaml)
+          GKE_CLUSTER_DEFAULT=$(yq e '.GKE_CLUSTER' .github/utils-cicd/default-common-configs.yaml)
+          GKE_LOCATION_DEFAULT=$(yq e '.GKE_LOCATION' .github/utils-cicd/default-common-configs.yaml)
+          GAR_LOCATION_DEFAULT=$(yq e '.GAR_LOCATION' .github/utils-cicd/default-common-configs.yaml)
+          GAR_LOCATION_PREFIX_DEFAULT=$(yq e '.GAR_LOCATION_PREFIX' .github/utils-cicd/default-common-configs.yaml)
+          SERVICE_ACCOUNT_DEFAULT=$(yq e '.SERVICE_ACCOUNT' .github/utils-cicd/default-common-configs.yaml)
+
+          if [ -z "${{ inputs.GCP_PROJECT_ID }}" ]; then GCP_PROJECT_ID="$GCP_PROJECT_ID_DEFAULT"; else GCP_PROJECT_ID="${{ inputs.GCP_PROJECT_ID }}"; fi
+          if [ -z "${{ inputs.GKE_CLUSTER }}" ]; then GKE_CLUSTER="$GKE_CLUSTER_DEFAULT"; else GKE_CLUSTER="${{ inputs.GKE_CLUSTER }}"; fi
+          if [ -z "${{ inputs.GKE_LOCATION }}" ]; then GKE_LOCATION="$GKE_LOCATION_DEFAULT"; else GKE_LOCATION="${{ inputs.GKE_LOCATION }}"; fi
+          if [ -z "${{ inputs.GAR_LOCATION }}" ]; then GAR_LOCATION="$GAR_LOCATION_DEFAULT"; else GAR_LOCATION="${{ inputs.GAR_LOCATION }}"; fi
+          if [ -z "${{ inputs.GAR_LOCATION_PREFIX }}" ]; then GAR_LOCATION_PREFIX="$GAR_LOCATION_PREFIX_DEFAULT"; else GAR_LOCATION_PREFIX="${{ inputs.GAR_LOCATION_PREFIX }}"; fi
+          if [ -z "${{ inputs.SERVICE_ACCOUNT }}" ]; then SERVICE_ACCOUNT="$SERVICE_ACCOUNT_DEFAULT"; else SERVICE_ACCOUNT="${{ inputs.SERVICE_ACCOUNT }}"; fi
+          
+          echo "Final GCP_PROJECT_ID: $GCP_PROJECT_ID"
+          echo "Final GKE_CLUSTER: $GKE_CLUSTER"
+          echo "Final GKE_LOCATION: $GKE_LOCATION"
+          echo "Final GAR_LOCATION: $GAR_LOCATION"
+          echo "Final GAR_LOCATION_PREFIX: $GAR_LOCATION_PREFIX"
+          echo "Final SERVICE_ACCOUNT: $SERVICE_ACCOUNT"
+
+          echo "::set-output name=gcp_project_id::$GCP_PROJECT_ID"
+          echo "::set-output name=gke_cluster::$GKE_CLUSTER"
+          echo "::set-output name=gke_location::$GKE_LOCATION"
+          echo "::set-output name=gar_location::$GAR_LOCATION"
+          echo "::set-output name=gar_location_prefix::$GAR_LOCATION_PREFIX"
+          echo "::set-output name=service_account::$SERVICE_ACCOUNT"
+          echo "✅ Common variables set."
+
+  deploy-to-gke:
+    name: Build and Deploy to GKE
+    needs: read-config
+    if: ${{ !contains(github.event.head_commit.message, '[skip-ci]') }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include: ${{fromJson(needs.read-config.outputs.image_matrix)}}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Authenticate with GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          service_account: ${{ needs.read-config.outputs.service_account }}
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ needs.read-config.outputs.gcp_project_id }}
+
+      - name: Configure Docker for Google Artifact Registry
+        run: |
+          set -ex
+          echo "🔐 Configuring Docker for GAR..."
+          gcloud auth configure-docker ${{ needs.read-config.outputs.gar_location_prefix }}
+          echo "✅ Docker configured."
+
+      # -------------------------
+      # BUILD AND PUSH IMAGE
+      # -------------------------
+      - name: Build Docker Image
+        run: |
+          set -ex
+          echo "🔨 Building Docker image: ${{ matrix.IMAGE_NAME }}:${{ matrix.IMAGE_TAG }}"
+          docker build -f ${{ matrix.DOCKER_FILE }} -t ${{ needs.read-config.outputs.gar_location }}/${{ matrix.IMAGE_NAME }}:${{ matrix.IMAGE_TAG }} ${{ matrix.DOCKER_CONTEXT_DIR }}
+          echo "✅ Docker image built."
+          docker images
+
+      - name: Push Docker Image to Artifact Registry
+        run: |
+          set -ex
+          echo "🚀 Pushing Docker image to GAR: ${{ needs.read-config.outputs.gar_location }}/${{ matrix.IMAGE_NAME }}:${{ matrix.IMAGE_TAG }}"
+          docker push ${{ needs.read-config.outputs.gar_location }}/${{ matrix.IMAGE_NAME }}:${{ matrix.IMAGE_TAG }}
+          echo "✅ Docker image pushed."
+
+  deploy-helm:
+    name: Deploy Helm Chart
+    needs: [read-config, deploy-to-gke]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include: ${{fromJson(needs.read-config.outputs.helm_matrix)}}
+    steps:
+      # -------------------------
+      # DEPLOY WITH HELM
+      # -------------------------
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Authenticate with GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          service_account: ${{ needs.read-config.outputs.service_account }}
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ needs.read-config.outputs.gcp_project_id }}
+        
+      - name: Get GKE Credentials
+        run: |
+          set -ex
+          echo "🔐 Getting GKE credentials for cluster ${{ needs.read-config.outputs.gke_cluster }}..."
+          gcloud container clusters get-credentials ${{ needs.read-config.outputs.gke_cluster }} --region ${{ needs.read-config.outputs.gke_location }}
+          echo "✅ GKE credentials obtained."
+
+      - name: Helm Dry Run
+        run: |
+          set -ex
+          echo "🧪 Performing Helm dry run for release: ${{ matrix.HELM_RELEASE_NAME }}..."
+          helm upgrade --install ${{ matrix.HELM_RELEASE_NAME }} ${{ matrix.HELM_CHART_DIR }} \
+            --namespace ${{ matrix.HELM_NAMESPACE }} --create-namespace \
+            --dry-run
+          echo "✅ Helm dry run completed."
+
+      - name: Deploy with Helm
+        run: |
+          set -ex
+          echo "🚀 Deploying Helm chart for release: ${{ matrix.HELM_RELEASE_NAME }}..."
+          helm upgrade --install ${{ matrix.HELM_RELEASE_NAME }} ${{ matrix.HELM_CHART_DIR }} \
+            --namespace ${{ matrix.HELM_NAMESPACE }} --create-namespace
+          echo "✅ Helm chart deployed."

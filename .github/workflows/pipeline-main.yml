@@ -1,0 +1,32 @@
+name: pipeline-main
+
+on:
+    workflow_dispatch:
+    push:
+        branches:
+            - main
+jobs:
+    # main: 
+    #     uses: cloud-ai-watchdog/sample-python-wsgi-prod-app/.github/workflows/python-gcr-main.yml@main
+    #     secrets: inherit
+    #     with:
+    #         GCP_PROJECT_ID: hackathon0-project
+    #         CLOUD_RUN_SERVICE: sample-python-prod-server
+    #         CLOUD_RUN_REGION: us-central1
+    #         GAR_LOCATION: us-central1-docker.pkg.dev/hackathon0-project/python-prod-server
+    #         GAR_LOCATION_PREFIX: us-central1-docker.pkg.dev
+    #         IMAGE_NAME: sample-python-prod-server-image
+    #         SERVICE_ACCOUNT: hackathon0-sa@hackathon0-project.iam.gserviceaccount.com
+    #         DOCKER_FILE: Dockerfile.app
+    #         CLOUD_RUN_RAM: 512Mi
+
+    main:
+        uses: cloud-ai-watchdog/sample-python-wsgi-prod-app/.github/workflows/python-gke-main.yml@main
+        secrets: inherit
+        with:
+            GCP_PROJECT_ID: cloud-ai-police
+            GKE_CLUSTER_NAME: cloud-ai-police-gke
+            GKE_CLUSTER_ZONE: us-central1-a
+            GAR_LOCATION: us-central1-docker.pkg.dev/cloud-ai-police/python-gke-server
+            GAR_LOCATION_PREFIX: us-central1-docker.pkg.dev
+            SERVICE_ACCOUNT: cloud-ai-police-sa@cloud-ai-police.iam.gserviceaccount.com

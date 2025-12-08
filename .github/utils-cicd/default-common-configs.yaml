@@ -1,0 +1,7 @@
+common:
+  GCP_PROJECT_ID: cloud-ai-police
+  GKE_CLUSTER_NAME: cloud-ai-police-gke
+  GKE_CLUSTER_ZONE: us-central1-a
+  GAR_LOCATION: us-central1-docker.pkg.dev/cloud-ai-police/python-gke-server
+  GAR_LOCATION_PREFIX: us-central1-docker.pkg.dev
+  SERVICE_ACCOUNT: cloud-ai-police-sa@cloud-ai-police.iam.gserviceaccount.com
